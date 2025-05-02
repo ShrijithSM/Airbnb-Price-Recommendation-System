@@ -22,7 +22,7 @@ with st.form("prediction_form"):
     # Essential inputs
     neighbourhood = st.selectbox(
         'Neighbourhood*',
-        ['Downtown', 'Suburb', 'Beachside', 'Mountain View', 'City Center'],
+        ['Brooklyn', 'Manhattan', 'Staten Island', 'Queens', 'Bronx'],
         index=0
     )
     
@@ -36,61 +36,20 @@ with st.form("prediction_form"):
         'Minimum Nights Stay*',
         1, 30, 1
     )
-    
-    reviews_per_month = st.slider(
-        'Average Reviews per Month*',
-        0.0, 10.0, 2.0, 0.1
-    )
-    
-    host_experience = st.radio(
-        'Host Experience*',
-        ('New Host', 'Experienced Host'),
-        index=0
-    )
-    
+
     submit_button = st.form_submit_button("Predict Price")
 
-# Prediction logic
-if submit_button:
-    # Prepare input DataFrame
-    input_data = pd.DataFrame([[
-        neighbourhood,
-        room_type,
-        minimum_nights,
-        reviews_per_month,
-        1 if host_experience == 'Experienced Host' else 0
-    ]], columns=[
-        'neighbourhood',
-        'room_type',
-        'minimum_nights',
-        'reviews_per_month',
-        'host_experience'
-    ])
-    
-    # Predict
-    try:
-        predicted_log_price = model.predict(input_data)
-        predicted_price = np.expm1(predicted_log_price)[0]  # Convert back from log
-        st.success(f"## Recommended Price: **${predicted_price:,.2f}** per night")
-        
-        # Price breakdown
-        with st.expander("How this price was calculated"):
-            st.markdown("""
-            - **Base Price**: ${:,.2f} (Room type: {})  
-            - **Location Premium**: {} neighborhood  
-            - **Demand Factor**: {} reviews/month  
-            - **Host Experience**: {}  
-            """.format(
-                predicted_price * 0.7,
-                room_type,
-                neighbourhood,
-                reviews_per_month,
-                host_experience
-            ))
-            
-    except Exception as e:
-        st.error(f"Prediction failed: {str(e)}")
+    if submit_button:
+        # Prepare input data for prediction
+        input_data = pd.DataFrame({
+            'neighbourhood_group': [neighbourhood],
+            'room_type': [room_type],
+            'minimum_nights': [minimum_nights]
+        })
 
-# Footer
-st.markdown("---")
-st.caption("🔴 *Required fields")
+        # Make prediction
+        try:
+            predicted_price = model.predict(input_data)[0]
+            st.success(f"The recommended price for your property is ${predicted_price:.2f} per night.")
+        except Exception as e:
+            st.error(f"An error occurred during prediction: {e}")

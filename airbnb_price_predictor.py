@@ -7,50 +7,31 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 import joblib
-filepath = './data/listings.csv'
-def load_data(filepath):
-    """Load and clean raw Airbnb data"""
+flepath = './data/listings.csv'
+def load_and_clean_data(filepath):
+    """Load, clean, and preprocess raw Airbnb data."""
     df = pd.read_csv(filepath)
     
-    # Clean price
-    df = df[df['price'].between(50, 1000)]  # Remove outliers
+    # Remove unwanted columns
+    columns_to_keep = ['neighbourhood_group', 'room_type', 'minimum_nights', 'price']
+    df = df[columns_to_keep]
     
-    # Create simplified features
-    df['host_experience'] = np.where(
-        df['calculated_host_listings_count'] > 3, 
-        1,  # Experienced
-        0   # New host
-    )
+    # Clean price (remove outliers)
+    df = df[df['price'].between(50, 1000)]
     
-    # Fill missing values
-    df['reviews_per_month'] = df['reviews_per_month'].fillna(0)
-    
-    return df
-
-def engineer_features(df):
-    """Create features for simplified model"""
-    # Bin neighborhoods into broader categories
-    df['neighbourhood'] = np.where(
-        df['neighbourhood'].str.contains('Downtown|Central', case=False),
-        'Downtown',
-        np.where(
-            df['neighbourhood'].str.contains('West|East|North|South', case=False),
-            'Suburb',
-            'Other'
-        )
-    )
-    
+    # Save cleaned data
+    df.to_csv('./data/preprocessed_data.csv', index=False)
     return df
 
 def build_pipeline():
-    """Create ML pipeline with preprocessing"""
-    numeric_features = ['minimum_nights', 'reviews_per_month']
+    """Create ML pipeline with preprocessing."""
+    numeric_features = ['minimum_nights']
     numeric_transformer = Pipeline([
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler', StandardScaler())
     ])
     
-    categorical_features = ['neighbourhood', 'room_type']
+    categorical_features = ['neighbourhood_group', 'room_type']
     categorical_transformer = Pipeline([
         ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
         ('onehot', OneHotEncoder(handle_unknown='ignore'))
@@ -71,19 +52,12 @@ def build_pipeline():
     ])
 
 def main():
-    # Load and prepare data
-    print("Loading data...")
-    df = load_data('data/listings.csv')
-    df = engineer_features(df)
+    # Load and clean data
+    print("Loading and cleaning data...")
+    df = load_and_clean_data('./data/listings.csv')
     
     # Define features and target
-    features = [
-        'neighbourhood',
-        'room_type',
-        'minimum_nights',
-        'reviews_per_month',
-        'host_experience'
-    ]
+    features = ['neighbourhood_group', 'room_type', 'minimum_nights']
     target = 'price'
     
     X = df[features]
@@ -105,16 +79,9 @@ def main():
     print(f"Training R²: {train_score:.3f}")
     print(f"Test R²: {test_score:.3f}")
     
-    # Save artifacts
-    joblib.dump(model, 'models/model.pkl')
-    print("Model saved to models/model.pkl")
-    
-    # Save sample data for Streamlit options
-    sample_data = {
-        'neighbourhoods': sorted(df['neighbourhood'].unique()),
-        'room_types': sorted(df['room_type'].unique())
-    }
-    joblib.dump(sample_data, 'models/metadata.pkl')
+    # Save model
+    joblib.dump(model, './models/model.pkl')
+    print("Model saved to ./models/model.pkl")
 
 if __name__ == "__main__":
     main()
