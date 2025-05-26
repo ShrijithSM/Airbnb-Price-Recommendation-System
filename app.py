@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import joblib
 
+
+
 # Load model and data
 @st.cache_data
 def load_model():
